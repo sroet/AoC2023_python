@@ -19,16 +19,13 @@ def read_file(fname):
 
 def compute_start_end(time, d_to_beat):
     # quadratic formula
+    d_to_beat += (
+        1  # (easier math; don't have to check for beating/matching is now enough)
+    )
     x1 = (-time + (time**2 - 4 * d_to_beat) ** 0.5) / -2
     x2 = (-time - (time**2 - 4 * d_to_beat) ** 0.5) / -2
     min_x = ceil(min(x1, x2))
     max_x = floor(max(x1, x2))
-    while min_x * (time - min_x) <= d_to_beat:
-        # catch when you match the distance instead of beat
-        min_x += 1
-    while max_x * (time - max_x) <= d_to_beat:
-        # catch when you match the distance instead of beat
-        max_x -= 1
     return min_x, max_x
 
 
