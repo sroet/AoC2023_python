@@ -16,6 +16,7 @@ def read_file(fname):
     return status
 
 
+# Caching is important, took runtime of the example down from 1.5 s to 1.8 ms!
 @cache
 def gen_options(numbers, reference, start=1):
     length = len(reference)
@@ -24,6 +25,7 @@ def gen_options(numbers, reference, start=1):
         left_numbers = numbers[1:]
     else:
         if any(i == "#" for i in reference):
+            # We will only be adding '.' so this will never work
             return 0
         return 1
 
@@ -35,7 +37,7 @@ def gen_options(numbers, reference, start=1):
     for i in range(start, max_input + 1):
         diff = i + my_number
         if any(c == "#" for c in reference[:i]):
-            # This will only become worse for later i
+            # We are adding '.' so this will only become worse for later i
             break
         if any(c == "." for c in reference[i:diff]):
             # might be solvable
