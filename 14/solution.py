@@ -19,28 +19,6 @@ def read_file(fname):
     return rocks, walls, y, x
 
 
-def sort_key_N(c):
-    # sort top to bottom
-    return c.imag
-
-
-def sort_key_W(c):
-    # sort left to right
-    return c.real
-
-
-def sort_key_S(c):
-    # sort bottom to top
-    return -c.imag
-
-
-def sort_key_E(c):
-    # sort right to left
-    return -c.real
-
-
-sort_keys = {"N": sort_key_N, "W": sort_key_W, "S": sort_key_S, "E": sort_key_E}
-
 directions = {"N": -1j, "W": -1, "S": 1j, "E": 1}
 
 
@@ -68,27 +46,29 @@ def print_map(rocks, walls):
         print(out)
 
 
-def roll_rocks(rocks, walls, sort_key, direction, boundary):
-    rocks = list(rocks)
-    rocks.sort(key=sort_key)
+def roll_rocks(rocks, walls, direction, boundary):
+    rocks = set(rocks)
     new_rocks = set()
-    for rock in rocks:
-        new_rock = rock 
+    while rocks:
+        rock = rocks.pop()
+        new_rock = rock
         while not boundary(new_rock) and (
             new_rock not in new_rocks and new_rock not in walls
         ):
             rock = new_rock
             new_rock += direction
-        new_rocks.add(rock)
+        # deal with possible clashes due to out of order handling
+        new_rock = rock
+        while new_rock in rocks:
+            new_rock -= direction
+        new_rocks.add(new_rock)
     return frozenset(new_rocks)
 
 
 def part_1(data):
     rocks, walls, max_y, max_x = data
     boundaries = make_boundary_checks(max_x, max_y)
-    new_rocks = roll_rocks(
-        rocks, walls, sort_keys["N"], directions["N"], boundaries["N"]
-    )
+    new_rocks = roll_rocks(rocks, walls, directions["N"], boundaries["N"])
     out = sum(max_y + 1 - rock.imag for rock in new_rocks)
     return round(out)
 
@@ -113,7 +93,6 @@ def part_2(data):
             rocks = roll_rocks(
                 rocks,
                 walls,
-                sort_keys[direction],
                 directions[direction],
                 boundaries[direction],
             )
