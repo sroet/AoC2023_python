@@ -1,9 +1,12 @@
 import argparse
 import time
+from collections import Counter
 
 
 def read_file(fname):
     rocks = set()
+    #needed to print the map if needed
+    #global walls
     walls = set()
     with open(fname, "r") as file:
         for y, line in enumerate(file):
@@ -22,18 +25,57 @@ def read_file(fname):
 directions = {"N": -1j, "W": -1, "S": 1j, "E": 1}
 
 
-def make_boundary_checks(max_x, max_y):
-    # N, W, S, E
-    out = {
-        "N": lambda x: x.imag < 0,
-        "W": lambda x: x.real < 0,
-        "S": lambda x: x.imag > max_y,
-        "E": lambda x: x.real > max_x,
-    }
-    return out
+def make_wall_maps(max_x, max_y, walls):
+    current_holes = []
+    N_map, S_map, E_map, W_map = {}, {}, {}, {}
+    # NS first, so per column
+    for x in range(max_x + 1):
+        current_wall = complex(x, -1)
+        for y in range(max_y + 1):
+            current_coord = complex(x, y)
+            if current_coord in walls:
+                next_wall = current_coord
+                for i in current_holes:
+                    N_map[i] = current_wall
+                    S_map[i] = next_wall
+                current_holes = []
+                current_wall = next_wall
+            else:
+                current_holes.append(current_coord)
+        # deal with final boundary
+        if current_holes:
+            next_wall = current_coord + 1j
+            for i in current_holes:
+                N_map[i] = current_wall
+                S_map[i] = next_wall
+                current_holes = []
+
+    # EW next, so per row
+    for y in range(max_y + 1):
+        current_wall = complex(-1, y)
+        for x in range(max_x + 1):
+            current_coord = complex(x, y)
+            if current_coord in walls:
+                next_wall = current_coord
+                for i in current_holes:
+                    W_map[i] = current_wall
+                    E_map[i] = next_wall
+                current_holes = []
+                current_wall = next_wall
+            else:
+                current_holes.append(current_coord)
+        # deal with final boundary
+        if current_holes:
+            next_wall = current_coord + 1
+            for i in current_holes:
+                W_map[i] = current_wall
+                E_map[i] = next_wall
+                current_holes = []
+    return {"N": N_map, "S": S_map, "E": E_map, "W": W_map}
 
 
-def print_map(rocks, walls):
+def print_map(rocks):
+    global walls
     for line in range(10):
         out = ""
         for c in range(10):
@@ -44,39 +86,52 @@ def print_map(rocks, walls):
             else:
                 out += "."
         print(out)
+    print("")
 
 
-def roll_rocks(rocks, walls, direction, boundary):
-    rocks = set(rocks)
-    new_rocks = set()
-    while rocks:
-        rock = rocks.pop()
-        new_rock = rock
-        while not boundary(new_rock) and (
-            new_rock not in new_rocks and new_rock not in walls
-        ):
-            rock = new_rock
-            new_rock += direction
-        # deal with possible clashes due to out of order handling
-        new_rock = rock
-        while new_rock in rocks:
-            new_rock -= direction
-        new_rocks.add(new_rock)
-    return frozenset(new_rocks)
+def gen_rocks_iter_from_wall_counter(wall_counter, last_direction="N"):
+    complex_dir = -directions[last_direction]
+    return (
+        key + complex_dir * n
+        for key, val in wall_counter.items()
+        for n in range(1, val + 1)
+    )
+
+
+def cycle_roll_rocks(rocks, wall_maps, wall_counter=None, part1=False):
+    order = "NWSE"
+    last_dir = "E"
+    if wall_counter is None:
+        # Assume first cycle
+        wall_map = wall_maps["N"]
+        wall_counter = Counter(wall_map[i] for i in rocks)
+        if part1:
+            return wall_counter
+        order = "WSE"
+        last_dir = "N"
+
+    for direction in order:
+        wall_map = wall_maps[direction]
+        itt = gen_rocks_iter_from_wall_counter(wall_counter, last_dir)
+        wall_counter = Counter(wall_map[i] for i in itt)
+        last_dir = direction
+
+    return wall_counter
 
 
 def part_1(data):
     rocks, walls, max_y, max_x = data
-    boundaries = make_boundary_checks(max_x, max_y)
-    new_rocks = roll_rocks(rocks, walls, directions["N"], boundaries["N"])
+    wall_maps = make_wall_maps(max_x, max_y, walls)
+    wall_counter = cycle_roll_rocks(rocks, wall_maps, part1=True)
+    new_rocks = gen_rocks_iter_from_wall_counter(wall_counter, "N")
     out = sum(max_y + 1 - rock.imag for rock in new_rocks)
-    return round(out)
+    return round(out), (rocks, wall_maps, max_y)
 
 
 def part_2(data):
-    rocks, walls, max_y, max_x = data
+    rocks, wall_maps, max_y = data
     rocks = frozenset(rocks)
-    boundaries = make_boundary_checks(max_x, max_y)
+    wall_counter = None
     known = {}
     for i in range(1_000_000_000):
         if rocks in known:
@@ -89,19 +144,14 @@ def part_2(data):
             return round(out)
         else:
             known[rocks] = i
-        for direction in "NWSE":
-            rocks = roll_rocks(
-                rocks,
-                walls,
-                directions[direction],
-                boundaries[direction],
-            )
+        wall_counter = cycle_roll_rocks(rocks, wall_maps, wall_counter)
+        rocks = frozenset(gen_rocks_iter_from_wall_counter(wall_counter, "E"))
 
 
 def main(fname):
     start = time.time()
     data = read_file(fname)
-    total_1 = part_1(data)
+    total_1, data = part_1(data)
     t1 = time.time()
     print(f"Part 1: {total_1}")
     print(f"Ran in {t1-start} s")
