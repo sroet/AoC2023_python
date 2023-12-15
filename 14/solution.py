@@ -5,8 +5,8 @@ from collections import Counter
 
 def read_file(fname):
     rocks = set()
-    #needed to print the map if needed
-    #global walls
+    # needed to print the map if needed
+    # global walls
     walls = set()
     with open(fname, "r") as file:
         for y, line in enumerate(file):
@@ -140,12 +140,15 @@ def part_2(data):
             offset = (1_000_000_000 - cycle_start) % cycle_length
             inverted_map = {val: key for key, val in known.items()}
             rocks = inverted_map[cycle_start + offset]
+            rocks = gen_rocks_iter_from_wall_counter(
+                {key: val for key, val in rocks}, "E"
+            )
             out = sum(max_y + 1 - rock.imag for rock in rocks)
             return round(out)
         else:
             known[rocks] = i
         wall_counter = cycle_roll_rocks(rocks, wall_maps, wall_counter)
-        rocks = frozenset(gen_rocks_iter_from_wall_counter(wall_counter, "E"))
+        rocks = frozenset((key, val) for key, val in wall_counter.items())
 
 
 def main(fname):
