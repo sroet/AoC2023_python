@@ -158,7 +158,8 @@ def part_2(modules):
             if out is not None:
                 queue.extend(out)
             if next_module.name in cycle_modules and next_module.out == out_search:
-                # decide to check the low output
+                # Note: For my input the loops are not offset at the start
+
                 if cycles[next_module.name] == 0:
                     cycles[next_module.name] = i + 1
         if all(val != 0 for val in cycles.values()):
