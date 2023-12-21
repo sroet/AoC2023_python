@@ -50,7 +50,7 @@ def sort_seeds(seeds):
     temp.sort(key=lambda x: x[1])
     return temp
 
-@lru_cache(maxsize=1000)
+@lru_cache(maxsize=1000000)
 def fill_field(seeds, rocks, max_x, max_y, odd=False, max_step=None):
     # todo: check if this is sane
     queue = deque([i for i in sort_seeds(seeds)])
@@ -156,25 +156,29 @@ def part_2(data, steps):
         max_diff = max(max_diff, i_step)
         x,y = current_field
         # top
-        dct = seed_edges.get((x, y-1), dict())
-        dct.update({complex(key.real, max_y): val+current_step for key,val in top.items()})
-        seed_edges[(x, y-1)] = dct
+        if (x, y-1) not in seen:
+            dct = seed_edges.get((x, y-1), dict())
+            dct.update({complex(key.real, max_y): val+current_step for key,val in top.items()})
+            seed_edges[(x, y-1)] = dct
+            queue.appendleft((x, y-1))
         # bottom
-        dct = seed_edges.get((x, y+1), dict())
-        dct.update({complex(key.real, 0) : val+current_step for key,val in bottom.items()})
-        seed_edges[(x, y+1)] = dct
+        if (x, y+1) not in seen:
+            dct = seed_edges.get((x, y+1), dict())
+            dct.update({complex(key.real, 0) : val+current_step for key,val in bottom.items()})
+            seed_edges[(x, y+1)] = dct
+            queue.appendleft((x, y+1))
         # left
-        dct = seed_edges.get((x-1, y), dict())
-        dct.update({complex(max_x, key.imag): val+current_step for key,val in left.items()})
-        seed_edges[(x-1, y)] = dct
+        if (x-1, y) not in seen:
+            dct = seed_edges.get((x-1, y), dict())
+            dct.update({complex(max_x, key.imag): val+current_step for key,val in left.items()})
+            seed_edges[(x-1, y)] = dct
+            queue.append((x-1, y))
         # right
-        dct = seed_edges.get((x+1, y), dict())
-        dct.update({complex(0, key.imag): val+current_step for key,val in right.items()})
-        seed_edges[(x+1, y)] = dct
-        queue.appendleft((x+1, y))
-        queue.appendleft((x-1, y))
-        queue.extend([(x, y+1), (x, y-1)])
-        #print(f"{current_field=} {temp=}")
+        if (x+1, y) not in seen:
+            dct = seed_edges.get((x+1, y), dict())
+            dct.update({complex(0, key.imag): val+current_step for key,val in right.items()})
+            seed_edges[(x+1, y)] = dct
+            queue.append((x+1, y))
     return out
 
 
